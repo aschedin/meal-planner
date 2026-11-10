@@ -155,6 +155,23 @@
     }
   }
 
+  function initTheme() {
+    const buttons = document.querySelectorAll("[data-theme-choice]");
+    const show = () =>
+      buttons.forEach((b) => {
+        const on = b.dataset.themeChoice === MP_THEME.get();
+        b.setAttribute("aria-pressed", String(on));
+        b.classList.toggle("is-active", on);
+      });
+    buttons.forEach((b) =>
+      b.addEventListener("click", () => {
+        MP_THEME.set(b.dataset.themeChoice);
+        show();
+      })
+    );
+    show();
+  }
+
   function initBackup() {
     $("backupIntro").textContent =
       MP.mode === "local"
@@ -171,6 +188,7 @@
     renderAll();
     if (MP.serverDown) setSaveState("Not saved — server offline", true);
     initBackup();
+    initTheme();
 
     document.querySelector("main").addEventListener("input", (e) => {
       if (e.target.closest("#foodGroupInputs, #nutrientInputs, #maxPrepTime, #maxCookTime, #avoidIngredients")) save();

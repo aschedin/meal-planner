@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <title>Preferences · Weekly Meal Planner</title>
 <link rel="stylesheet" href="styles.css" />
+<script src="theme.js"></script>
 </head>
 <body>
 
@@ -31,6 +32,16 @@
         <span id="saveState" class="save-state" role="status" aria-live="polite"></span>
         <button type="button" id="resetBtn" class="btn btn--small btn--ghost">Reset to recommended</button>
       </div>
+    </div>
+  </section>
+
+  <section class="card pref-section" aria-labelledby="themeHeading">
+    <h2 id="themeHeading">Appearance</h2>
+    <p class="muted">Choose how the app looks on this device. "Match device" follows your device's light or dark setting.</p>
+    <div class="week-tabs" role="group" aria-label="Color mode">
+      <button type="button" class="week-tab" data-theme-choice="auto" aria-pressed="false">Match device</button>
+      <button type="button" class="week-tab" data-theme-choice="light" aria-pressed="false">Light</button>
+      <button type="button" class="week-tab" data-theme-choice="dark" aria-pressed="false">Dark</button>
     </div>
   </section>
 
