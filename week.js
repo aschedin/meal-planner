@@ -514,8 +514,8 @@
           </div>
         </div>
         ${recipe.notes ? `<div class="recipe-notes"><h4>Notes</h4><p>${escapeHtml(recipe.notes)}</p></div>` : ""}
-        <div>
-          <h4>Nutrition <span class="hint">per serving</span></h4>
+        <details class="nutrition-details">
+          <summary>Nutrition per serving</summary>
           <div class="nutrition-grid">
             <div><span>Calories</span><span>${Number(n.calories) || 0}</span></div>
             <div><span>Protein</span><span>${Number(n.proteinG) || 0} g</span></div>
@@ -526,7 +526,7 @@
             <div><span>Sodium</span><span>${Number(n.sodiumMg) || 0} mg</span></div>
             <div><span>Added sugar</span><span>${Number(n.addedSugarG) || 0} g</span></div>
           </div>
-        </div>`;
+        </details>`;
       list.appendChild(card);
     });
   }
@@ -605,6 +605,7 @@
     if (!all.length) {
       wrap.innerHTML = '<p class="empty-state">No ingredients to shop for yet.</p>';
       $("shoppingCount").textContent = "";
+      $("copyListsBtn").hidden = true;
       return;
     }
 
@@ -630,7 +631,7 @@
       const section = document.createElement("div");
       section.className = "store-section" + (store ? " store-section--" + store : "");
       const bulk = store
-        ? `<button type="button" class="btn btn--small btn--ghost" data-copy="${store}">Copy list</button>`
+        ? ""
         : `<span class="store-section__bulk">Send all to <button type="button" class="btn--text" data-bulk="costco">Costco</button> <button type="button" class="btn--text" data-bulk="cub">Cub</button></span>`;
       const hint = store ? "" : '<p class="hint">Tap Costco or Cub on each item to split your list. Your choices are remembered for future weeks.</p>';
       const groups = AISLE_ORDER.filter((a) => rows.some((x) => x.aisle === a))
@@ -648,6 +649,19 @@
 
     const done = all.filter((x) => checks[x.item.key]).length;
     $("shoppingCount").textContent = `${done} of ${all.length} picked up`;
+    $("copyListsBtn").hidden = !all.some((x) => x.store);
+  }
+
+  // One list for both stores: "COSTCO" then its items, a blank line, "CUB" then its items.
+  function bothListsText(recipes, week) {
+    return [
+      ["costco", "COSTCO"],
+      ["cub", "CUB"],
+    ]
+      .map(([s, label]) => ({ label, text: storeListText(s, recipes, week) }))
+      .filter((x) => x.text)
+      .map((x) => x.label + "\n" + x.text)
+      .join("\n\n");
   }
 
   function renderPrep(tasks, week) {
@@ -713,30 +727,35 @@
       if (dismissBtn) dismissAt(Number(dismissBtn.dataset.dismiss));
     });
 
+    // One button copies the Costco and Cub lists together.
+    $("copyListsBtn").addEventListener("click", async (e) => {
+      const copyBtn = e.currentTarget;
+      const week = currentWeek();
+      if (!week) return;
+      const text = bothListsText(recipesFor(week), week);
+      const label = copyBtn.dataset.label || (copyBtn.dataset.label = copyBtn.textContent);
+      document.querySelectorAll(".copy-fallback").forEach((el) => el.remove());
+      if (!text) {
+        copyBtn.textContent = "Nothing left to copy";
+      } else if (await copyText(text)) {
+        const n = text.split("\n").filter((l) => l && l !== "COSTCO" && l !== "CUB").length;
+        copyBtn.textContent = "Copied " + n + " item" + (n === 1 ? "" : "s") + " ✓";
+      } else {
+        copyBtn.textContent = "Couldn't copy - select the text below";
+        const box = document.createElement("textarea");
+        box.className = "copy-fallback";
+        box.readOnly = true;
+        box.rows = Math.min(14, text.split("\n").length + 1);
+        box.value = text;
+        $("shoppingList").before(box);
+        box.focus();
+        box.select();
+      }
+      setTimeout(() => (copyBtn.textContent = label), 2500);
+    });
+
     // Shopping list: assign items to a store (tap again to unassign), or send all unsorted items at once.
     $("shoppingList").addEventListener("click", async (e) => {
-      const copyBtn = e.target.closest("[data-copy]");
-      if (copyBtn && currentWeek()) {
-        const text = storeListText(copyBtn.dataset.copy, recipesFor(currentWeek()), currentWeek());
-        const label = copyBtn.textContent;
-        if (!text) {
-          copyBtn.textContent = "Nothing left to copy";
-        } else if (await copyText(text)) {
-          copyBtn.textContent = "Copied " + text.split("\n").length + " items ✓";
-        } else {
-          copyBtn.textContent = "Couldn't copy - select the text below";
-          const box = document.createElement("textarea");
-          box.className = "copy-fallback";
-          box.readOnly = true;
-          box.rows = Math.min(12, text.split("\n").length + 1);
-          box.value = text;
-          copyBtn.closest(".store-section").querySelector(".store-section__head").after(box);
-          box.focus();
-          box.select();
-        }
-        setTimeout(() => (copyBtn.textContent = label), 2500);
-        return;
-      }
       const btn = e.target.closest("[data-store-btn]");
       const bulk = e.target.closest("[data-bulk]");
       const week = currentWeek();

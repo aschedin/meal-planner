@@ -307,6 +307,9 @@ input[type="file"] {
   margin-top: 8px;
 }
 .nutrition-grid div { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--color-border); padding: 2px 0; }
+.nutrition-details summary { color: var(--color-primary-dark); font-weight: 600; font-size: 0.9rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; width: fit-content; }
+.nutrition-details summary:hover { text-decoration-thickness: 2px; }
+.shopping-actions { margin: 4px 0 12px; }
 
 .badge {
   font-size: 0.72rem;
