@@ -1,6 +1,6 @@
 /* Offline support for the phone app: every page, script and icon is cached on first visit,
    so the app opens (and works) with no signal. Bump VERSION (the build does) to ship an update. */
-const VERSION = "20261110102501";
+const VERSION = "20261110111135";
 const CACHE = "meal-planner-" + VERSION;
 const FILES = [
   "./", "index.html", "recipes.html", "preferences.html",
