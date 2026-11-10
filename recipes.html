@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' blob:; connect-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#b5651d" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Meal Planner" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<title>Recipes · Weekly Meal Planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header id="appHeader"></header>
+
+<main class="page">
+  <div id="offlineBanner" class="banner" role="alert" hidden></div>
+
+  <section class="card" aria-labelledby="pageTitle">
+    <div class="library__header">
+      <div>
+        <h1 class="page-title" id="pageTitle">Recipes</h1>
+        <p class="muted" id="libraryStatus"></p>
+      </div>
+      <button type="button" id="addRecipeBtn" class="btn btn--primary">+ Add recipe</button>
+    </div>
+    <div class="toolbar">
+      <input type="search" id="searchBox" placeholder="Search by name or protein…" aria-label="Search recipes" />
+      <select id="ratingFilter" aria-label="Filter by whether we've made it">
+        <option value="all">All recipes</option>
+        <option value="">Not made yet</option>
+        <option value="ok">Made it — OK</option>
+        <option value="good">Made it — good</option>
+        <option value="great">Made it — great</option>
+      </select>
+      <button type="button" id="findPhotosBtn" class="btn btn--small btn--ghost" hidden></button>
+      <button type="button" id="restoreStartersBtn" class="btn btn--small btn--ghost" hidden></button>
+    </div>
+    <p class="muted" id="photoStatus" role="status" aria-live="polite"></p>
+    <div id="libraryList" class="library-list"></div>
+  </section>
+
+  <section class="card" aria-labelledby="importHeading">
+    <h2 id="importHeading">Import recipes</h2>
+    <p class="muted">Paste links to recipe pages or upload PDF files. They're added to your library, where you can fix anything that was read imperfectly. Nutrition on imports is an estimate unless the page lists it, so check it when you can. Photos and images can't be read automatically — use “+ Add recipe” for those.</p>
+    <div id="importUrlBox">
+      <label class="stack-label" for="importUrls">Recipe page URLs, one per line</label>
+      <textarea id="importUrls" rows="3" placeholder="https://www.superhealthykids.com/honey-garlic-teriyaki-chicken-bowls/"></textarea>
+    </div>
+    <p class="notice" id="importLocalNote" hidden>Importing from web links needs the laptop version of this app. Here you can add recipes by hand, import a PDF, or restore a backup from your laptop (Preferences, Back up &amp; restore).</p>
+    <label class="stack-label" for="importFiles">Or upload files (PDF, DOCX)</label>
+    <input type="file" id="importFiles" multiple accept=".pdf" />
+    <div class="panel__footer">
+      <button type="button" id="importBtn" class="btn btn--primary">Import</button>
+      <span id="importStatus" class="muted" role="status" aria-live="polite"></span>
+    </div>
+    <ul id="importResults" class="import-results"></ul>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p>Your recipes, preferences and plan are stored on this device only — nothing is uploaded anywhere.</p>
+</footer>
+
+<dialog id="recipeDialog" class="recipe-dialog" aria-labelledby="recipeDialogTitle">
+  <form id="recipeForm">
+    <h2 id="recipeDialogTitle">Add recipe</h2>
+
+    <div class="photo-field">
+      <div id="rfPhotoPreview" class="photo-preview"></div>
+      <div class="photo-field__actions">
+        <label class="btn btn--small btn--ghost">Choose photo…<input type="file" id="rfPhotoFile" accept="image/*" hidden /></label>
+        <button type="button" id="rfPhotoRemove" class="btn btn--small btn--ghost" hidden>Remove photo</button>
+        <span id="rfPhotoHint" class="hint" role="status"></span>
+      </div>
+    </div>
+
+    <div class="rf-grid rf-grid--top">
+      <label class="rf-field rf-field--wide">Name
+        <input type="text" id="rfName" required maxlength="120" />
+      </label>
+      <label class="rf-field rf-field--wide">Source URL <span class="hint">(optional)</span>
+        <input type="url" id="rfUrl" placeholder="https://" />
+      </label>
+      <label class="rf-field">Main protein
+        <select id="rfProtein">
+          <option value="chicken">Chicken</option>
+          <option value="beef">Beef</option>
+          <option value="pork">Pork</option>
+          <option value="turkey">Turkey</option>
+          <option value="seafood">Seafood</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label class="rf-field">Toddler appeal
+        <select id="rfToddler">
+          <option value="1">★☆☆☆☆</option><option value="2">★★☆☆☆</option><option value="3" selected>★★★☆☆</option>
+          <option value="4">★★★★☆</option><option value="5">★★★★★</option>
+        </select>
+      </label>
+      <label class="rf-field rf-field--wide">Have we made this?
+        <select id="rfRating">
+          <option value="">Not made yet</option>
+          <option value="ok">Made it — OK</option>
+          <option value="good">Made it — good</option>
+          <option value="great">Made it — great</option>
+        </select>
+      </label>
+      <label class="rf-field">Prep (min)<input type="number" id="rfPrep" min="0" step="1" value="15" /></label>
+      <label class="rf-field">Cook (min)<input type="number" id="rfCook" min="0" step="1" value="30" /></label>
+      <label class="rf-field">Servings<input type="number" id="rfServings" min="1" step="1" value="6" /></label>
+    </div>
+
+    <h3>Ingredients</h3>
+    <div class="ing-head hint"><span>Ingredient</span><span>Qty</span><span>Unit</span><span>Prep</span><span>Days ahead</span><span></span></div>
+    <div id="rfIngredients" class="ing-rows"></div>
+    <button type="button" id="rfAddIngredient" class="btn btn--small btn--ghost">+ Add ingredient</button>
+
+    <h3>Instructions <span class="hint">(one step per line)</span></h3>
+    <textarea id="rfInstructions" rows="6"></textarea>
+
+    <h3>Notes <span class="hint">(tips, substitutions)</span></h3>
+    <textarea id="rfNotes" rows="3"></textarea>
+
+    <h3>Nutrition per serving</h3>
+    <div id="rfNutrition" class="rf-grid rf-grid--num"></div>
+
+    <h3>Food-group servings per serving</h3>
+    <div id="rfFoodGroups" class="rf-grid rf-grid--num"></div>
+
+    <div class="dialog__footer">
+      <button type="button" id="rfCancel" class="btn btn--ghost">Cancel</button>
+      <button type="submit" class="btn btn--primary">Save recipe</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="data.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="recipes.js"></script>
+</body>
+</html>

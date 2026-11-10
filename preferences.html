@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' blob:; connect-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#b5651d" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Meal Planner" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<title>Preferences · Weekly Meal Planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header id="appHeader"></header>
+
+<main class="page">
+  <div id="offlineBanner" class="banner" role="alert" hidden></div>
+
+  <section class="card" aria-labelledby="pageTitle">
+    <div class="library__header">
+      <div>
+        <h1 class="page-title" id="pageTitle">Preferences</h1>
+        <p class="muted">Set these once — every week's plan uses them. Changes save automatically and apply the next time you generate a plan.</p>
+      </div>
+      <div class="week-head__actions">
+        <span id="saveState" class="save-state" role="status" aria-live="polite"></span>
+        <button type="button" id="resetBtn" class="btn btn--small btn--ghost">Reset to recommended</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card pref-section" aria-labelledby="nutritionHeading">
+    <h2 id="nutritionHeading">Nutrition targets</h2>
+    <p class="muted">Defaults follow USDA MyPlate and FDA Daily Values for an adult on a 2,000-calorie diet. They're a starting point — adjust them for your family, and check them against current guidance or your doctor's advice.</p>
+    <div class="panel__grid">
+      <div class="field-group">
+        <h3>Weekly food-group servings <span class="hint">(per person)</span></h3>
+        <div id="foodGroupInputs" class="stacked-inputs"></div>
+      </div>
+      <div class="field-group">
+        <h3>Nutrients</h3>
+        <div id="nutrientInputs" class="repeatable-list"></div>
+        <button type="button" id="addNutrientBtn" class="btn btn--small btn--ghost">+ Add nutrient</button>
+        <p class="hint">Protein, fiber, calcium, iron, vitamin C, sugar, sodium and calories are matched to recipe data. Put “limit” in a name (like “Sodium (limit)”) to treat it as a ceiling rather than a goal.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card pref-section" aria-labelledby="timeHeading">
+    <h2 id="timeHeading">Time limits</h2>
+    <p class="muted">Recipes longer than these are left out of your weekly plan.</p>
+    <div class="stacked-inputs narrow-form">
+      <label class="inline-field"><span>Max prep time (min)</span><input type="number" id="maxPrepTime" min="0" step="5" /></label>
+      <label class="inline-field"><span>Max cook time (min)</span><input type="number" id="maxCookTime" min="0" step="5" /></label>
+    </div>
+  </section>
+
+  <section class="card pref-section" aria-labelledby="avoidHeading">
+    <h2 id="avoidHeading">Ingredients to avoid</h2>
+    <p class="muted">One per line (or comma-separated). Any recipe with a matching ingredient is never planned — for example “peanut” also excludes peanut butter.</p>
+    <textarea id="avoidIngredients" rows="5" placeholder="peanuts&#10;shellfish"></textarea>
+  </section>
+  <section class="card pref-section" aria-labelledby="backupHeading">
+    <h2 id="backupHeading">Back up &amp; restore</h2>
+    <p class="muted" id="backupIntro"></p>
+    <button type="button" id="exportBtn" class="btn btn--primary btn--small">Download or share backup</button>
+
+    <h3 class="backup-sub">Restore from a backup</h3>
+    <input type="file" id="restoreFile" accept=".json,application/json" />
+    <div class="radio-group" role="radiogroup" aria-label="How to restore">
+      <label class="check-field"><input type="radio" name="restoreMode" value="merge" checked /><span>Add recipes I don't have yet <span class="hint">(keeps what's here)</span></span></label>
+      <label class="check-field"><input type="radio" name="restoreMode" value="replace" /><span>Replace everything on this device <span class="hint">(recipes, photos, preferences, plan)</span></span></label>
+    </div>
+    <button type="button" id="restoreBtn" class="btn btn--ghost btn--small">Restore</button>
+    <p class="muted" id="backupStatus" role="status" aria-live="polite"></p>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p>Your recipes, preferences and plan are stored on this device only — nothing is uploaded anywhere.</p>
+</footer>
+
+<template id="nutrientRowTemplate">
+  <div class="repeatable-row">
+    <input type="text" class="nutrient-name" placeholder="Nutrient" aria-label="Nutrient name" />
+    <input type="number" class="nutrient-amount" min="0" step="any" placeholder="Amount" aria-label="Target amount" />
+    <select class="nutrient-unit" aria-label="Unit">
+      <option value="g">g</option>
+      <option value="mg">mg</option>
+      <option value="mcg">mcg</option>
+      <option value="kcal">kcal</option>
+      <option value="IU">IU</option>
+    </select>
+    <select class="nutrient-period" aria-label="Per">
+      <option value="day">/ day</option>
+      <option value="week">/ week</option>
+    </select>
+    <button type="button" class="btn btn--icon remove-nutrient-btn" aria-label="Remove nutrient" title="Remove">✕</button>
+  </div>
+</template>
+
+<script src="data.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="preferences.js"></script>
+</body>
+</html>

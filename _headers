@@ -1,0 +1,11 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' blob:; connect-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+/*.html
+  Cache-Control: no-cache
+/*.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache

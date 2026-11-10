@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self'; img-src 'self' blob:; connect-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#b5651d" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Meal Planner" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<title>This Week · Weekly Meal Planner</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header id="appHeader"></header>
+
+<main class="page">
+  <div id="offlineBanner" class="banner" role="alert" hidden></div>
+
+  <!-- Week header + controls -->
+  <section class="card" aria-labelledby="pageTitle">
+    <div class="week-head">
+      <div>
+        <h1 class="page-title" id="pageTitle">This Week</h1>
+        <p class="muted" id="weekRange">No plan yet</p>
+      </div>
+      <div class="week-head__actions">
+        <button type="button" id="generateBtn" class="btn btn--primary">Generate plan</button>
+      </div>
+    </div>
+    <div class="week-tabs" role="group" aria-label="Choose week">
+      <button type="button" id="tabThis" class="week-tab" aria-pressed="true"></button>
+      <button type="button" id="tabNext" class="week-tab" aria-pressed="false"></button>
+    </div>
+    <p class="muted" id="prefsSummary"></p>
+    <p class="muted" id="generateStatus" role="status" aria-live="polite"></p>
+  </section>
+
+  <!-- Empty state -->
+  <section class="card empty-card" id="emptyState" hidden>
+    <h2>Let's plan your week</h2>
+    <p class="muted">I'll pick 3 recipes from your library that fit your preferences, then lay out the week: shop Friday, chop Saturday, cook Sunday, Tuesday and Thursday, with leftovers in between.</p>
+    <p class="muted">Adjust what's eligible on the <a href="recipes.html">Recipes</a> and <a href="preferences.html">Preferences</a> pages first if you like.</p>
+  </section>
+
+  <div id="weekContent" class="stack" hidden>
+
+    <section class="card" aria-labelledby="dailyHeading">
+      <h2 id="dailyHeading">Daily plan</h2>
+      <p class="muted">Weeks run Friday to Thursday. Shop Friday, chop Saturday, cook Sunday, Tuesday and Thursday; each batch is eaten again as leftovers the next day.</p>
+      <div id="beforeWeek" class="notice" hidden></div>
+      <div id="dailyPlan" class="plan-days"></div>
+    </section>
+
+    <section class="card" aria-labelledby="recipesHeading">
+      <h2 id="recipesHeading">This week's recipes</h2>
+      <div id="recipeDetailsList" class="recipe-list"></div>
+    </section>
+
+    <section class="card" aria-labelledby="shoppingHeading">
+      <div class="section-head">
+        <h2 id="shoppingHeading">Shopping checklist</h2>
+        <span class="muted" id="shoppingCount"></span>
+      </div>
+      <p class="muted">Split your list between Costco and Cub by tapping a store on each item. Your choices are remembered for future weeks, and each store's items are grouped by aisle.</p>
+      <div id="shoppingList" class="shopping-list"></div>
+    </section>
+
+    <section class="card" aria-labelledby="prepHeading">
+      <div class="section-head">
+        <h2 id="prepHeading">Prep checklist</h2>
+        <span class="muted" id="prepCount"></span>
+      </div>
+      <p class="muted">Chopping happens on Saturday; marinating and thawing the day before each cook day.</p>
+      <div id="prepList" class="prep-list"></div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="app-footer">
+  <p>Your recipes, preferences and plan are stored on this device only — nothing is uploaded anywhere.</p>
+</footer>
+
+<script src="data.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="week.js"></script>
+</body>
+</html>
