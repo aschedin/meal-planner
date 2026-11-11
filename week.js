@@ -649,14 +649,15 @@
 
     const done = all.filter((x) => checks[x.item.key]).length;
     $("shoppingCount").textContent = `${done} of ${all.length} picked up`;
-    $("copyListsBtn").hidden = !all.some((x) => x.store);
+    $("copyListsBtn").hidden = false;
   }
 
-  // One list for both stores: "COSTCO" then its items, a blank line, "CUB" then its items.
+  // One list: COSTCO, CUB, then NOT SORTED YET, each header followed by its items, blank line between.
   function bothListsText(recipes, week) {
     return [
       ["costco", "COSTCO"],
       ["cub", "CUB"],
+      ["", "NOT SORTED YET"],
     ]
       .map(([s, label]) => ({ label, text: storeListText(s, recipes, week) }))
       .filter((x) => x.text)
@@ -738,7 +739,7 @@
       if (!text) {
         copyBtn.textContent = "Nothing left to copy";
       } else if (await copyText(text)) {
-        const n = text.split("\n").filter((l) => l && l !== "COSTCO" && l !== "CUB").length;
+        const n = text.split("\n").filter((l) => l && l !== "COSTCO" && l !== "CUB" && l !== "NOT SORTED YET").length;
         copyBtn.textContent = "Copied " + n + " item" + (n === 1 ? "" : "s") + " ✓";
       } else {
         copyBtn.textContent = "Couldn't copy - select the text below";
