@@ -478,13 +478,13 @@
       .filter((ing) => !seen.has(haveKey(ing.name)) && seen.add(haveKey(ing.name)))
       .map((ing) => {
         const qty = [ing.qty, ing.unit && ing.unit !== "each" ? ing.unit : ""].filter((x) => x !== "" && x != null).join(" ");
-        return `<label class="shop-prompt__item"><input type="checkbox" data-shop-ing="${escapeHtml(haveKey(ing.name))}" checked /><span>${escapeHtml(ing.name)}</span><span class="muted">${escapeHtml(qty)}</span></label>`;
+        return `<label class="shop-prompt__item"><input type="checkbox" data-shop-ing="${escapeHtml(haveKey(ing.name))}" /><span>${escapeHtml(ing.name)}</span><span class="muted">${escapeHtml(qty)}</span></label>`;
       })
       .join("");
     el.innerHTML =
-      `<strong>Which ingredients for “${escapeHtml(recipe.name)}” do you still need to buy?</strong> Uncheck anything you already have.` +
+      `<strong>Which ingredients for “${escapeHtml(recipe.name)}” do you need to buy?</strong> Check the ones to add; anything left unchecked stays off your list.` +
       `<div class="shop-prompt__list">${rows}</div>` +
-      '<div class="shop-prompt__actions"><button type="button" class="btn btn--small btn--primary" data-shop-confirm="1">Add to shopping list</button>' +
+      '<div class="shop-prompt__actions"><button type="button" class="btn btn--small btn--primary" data-shop-confirm="1">Add checked to shopping list</button>' +
       '<button type="button" class="btn--text" data-shop-skip="1">Add everything</button></div>';
   }
 
