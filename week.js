@@ -240,9 +240,7 @@
       ids[i] = null;
       setStatus("No other eligible recipes to swap in. Add more on the Recipes page.");
     }
-    const cooked = Object.assign({}, week.cooked);
-    delete cooked[i]; // a new recipe in this slot hasn't been cooked
-    MP.updatePlan({ weeks: Object.assign({}, weeks(), { [weekISO]: Object.assign({}, week, { recipeIds: ids, cooked }) }) });
+    MP.updatePlan({ weeks: Object.assign({}, weeks(), { [weekISO]: Object.assign({}, week, { recipeIds: ids }) }) });
   }
 
   // If a planned recipe was deleted or dismissed since, swap in a replacement.
@@ -383,54 +381,36 @@
     renderPrep(tasks, week);
   }
 
-  // Long date range, plus how many of the week's recipes have been cooked.
   function renderWeekHeading() {
-    const week = currentWeek();
-    let text = formatDateLong(fromISODate(viewWeek)) + " – " + formatDateLong(addDays(fromISODate(viewWeek), 6));
-    if (week && viewWeek <= thisWeekISO()) {
-      const n = recipesFor(week).filter((r, i) => r && (week.cooked || {})[i]).length;
-      text += ` · ${n} of ${week.recipeIds.filter(Boolean).length} cooked`;
-    }
-    $("weekRange").textContent = text;
+    $("weekRange").textContent = formatDateLong(fromISODate(viewWeek)) + " – " + formatDateLong(addDays(fromISODate(viewWeek), 6));
   }
 
-  // Past week: list recipes that never got cooked, with a way to move one into the current week.
-  let pendingAdd = null; // slot index in the past week being added, while choosing where it goes
+  // Moving a past recipe forward: shows which of this week's meals to replace.
+  let pendingAdd = null; // slot index in the past week being moved, while choosing where it goes
   function renderCatchUp(week, recipes) {
     const el = $("catchUp");
-    const todo = isPastWeek(viewWeek) ? recipes.map((r, i) => ({ r, i })).filter((x) => x.r && !(week.cooked || {})[x.i]) : [];
-    el.hidden = !todo.length;
-    if (!todo.length) {
+    const recipe = isPastWeek(viewWeek) && pendingAdd != null ? recipes[pendingAdd] : null;
+    const cur = weeks()[thisWeekISO()];
+    el.hidden = !recipe || !cur;
+    if (!recipe || !cur) {
       pendingAdd = null;
       return;
     }
     const thisISO = thisWeekISO();
-    const cur = weeks()[thisISO];
-    const curRecipes = cur ? recipesFor(cur) : [];
-    const rows = todo
-      .map(({ r, i }) => {
-        const inPlan = cur && cur.recipeIds.includes(r.id);
-        let action;
-        if (inPlan) action = '<span class="hint">Already in this week\'s plan</span>';
-        else if (pendingAdd === i && cur) {
-          const today = toISODate(MP.today());
-          let slots = COOK_DAYS.map((d, s) => s).filter((s) => toISODate(addDays(fromISODate(thisISO), COOK_DAYS[s])) >= today && !(cur.cooked || {})[s]);
-          if (!slots.length) slots = COOK_DAYS.map((d, s) => s);
-          action =
-            '<span class="catchup__choose">Replace which meal this week? ' +
-            slots
-              .map((s) => {
-                const day = addDays(fromISODate(thisISO), COOK_DAYS[s]).toLocaleDateString(undefined, { weekday: "short" });
-                const nm = curRecipes[s] ? curRecipes[s].name : "empty";
-                return `<button type="button" class="btn btn--small btn--ghost" data-add-target="${s}" data-add-slot="${i}">${escapeHtml(day + ": " + nm)}</button>`;
-              })
-              .join("") +
-            '<button type="button" class="btn--text" data-add-cancel="1">Cancel</button></span>';
-        } else action = `<button type="button" class="btn btn--small btn--primary" data-add-slot="${i}">Add to this week</button>`;
-        return `<li><span>${escapeHtml(r.name)}</span> ${action}</li>`;
-      })
-      .join("");
-    el.innerHTML = `<strong>Not cooked yet</strong> — add one to this week's plan if you still want to make it.<ul class="catchup-list">${rows}</ul>`;
+    const curRecipes = recipesFor(cur);
+    const today = toISODate(MP.today());
+    let slots = COOK_DAYS.map((d, s) => s).filter((s) => toISODate(addDays(fromISODate(thisISO), COOK_DAYS[s])) >= today);
+    if (!slots.length) slots = COOK_DAYS.map((d, s) => s);
+    el.innerHTML =
+      `<strong>Move “${escapeHtml(recipe.name)}” to this week</strong> — which meal should it replace?<div class="catchup__choose">` +
+      slots
+        .map((s) => {
+          const day = addDays(fromISODate(thisISO), COOK_DAYS[s]).toLocaleDateString(undefined, { weekday: "short" });
+          const nm = curRecipes[s] ? curRecipes[s].name : "empty";
+          return `<button type="button" class="btn btn--small btn--ghost" data-add-target="${s}" data-add-slot="${pendingAdd}">${escapeHtml(day + ": " + nm)}</button>`;
+        })
+        .join("") +
+      '<button type="button" class="btn--text" data-add-cancel="1">Cancel</button></div>';
   }
 
   // Put a past recipe into this week: replace a chosen slot, or start the week around it if there's no plan yet.
@@ -445,9 +425,7 @@
       if (targetSlot == null) return;
       const ids = cur.recipeIds.slice();
       ids[targetSlot] = recipe.id;
-      const cooked = Object.assign({}, cur.cooked);
-      delete cooked[targetSlot];
-      week = Object.assign({}, cur, { recipeIds: ids, cooked });
+      week = Object.assign({}, cur, { recipeIds: ids });
     } else {
       // No plan yet: put it in the first upcoming cook day and fill the rest as usual.
       const today = toISODate(MP.today());
@@ -467,12 +445,12 @@
         chosen.push(pick);
         ids[s] = pick.id;
       }
-      week = { recipeIds: ids, cooked: {}, checks: { shop: {}, prep: {} } };
+      week = { recipeIds: ids, checks: { shop: {}, prep: {} } };
     }
     pendingAdd = null;
     MP.updatePlan({ weeks: Object.assign({}, weeks(), { [thisISO]: week }) });
     showWeek(thisISO);
-    setStatus("Added “" + recipe.name + "” to this week's plan.");
+    setStatus("Moved “" + recipe.name + "” to this week's plan.");
   }
 
   function renderPrefsSummary() {
@@ -608,7 +586,7 @@
             <div class="toddler-appeal" title="Toddler appeal">${starRating(recipe.toddlerAppeal || 3)} <span class="hint">toddler appeal</span></div>
           </div>
           <div class="recipe-card__actions">
-            <label class="cooked-toggle"><input type="checkbox" data-cooked="${i}"${((currentWeek() || {}).cooked || {})[i] ? " checked" : ""} /> Cooked</label>
+            ${isPastWeek(viewWeek) && !(weeks()[thisWeekISO()] || { recipeIds: [] }).recipeIds.includes(recipe.id) ? `<button type="button" class="btn btn--small btn--primary" data-move="${i}">Move to this week</button>` : ""}
             ${MP.ratingSelect(recipe.id, recipe.rating)}
             ${isPastWeek(viewWeek) ? "" : `<button type="button" class="btn btn--icon dismiss-icon" data-dismiss="${i}" title="Dismiss — never plan this again and swap in another" aria-label="Dismiss this recipe">✕</button>`}
           </div>
@@ -843,33 +821,27 @@
 
     $("catchUp").addEventListener("click", (e) => {
       const target = e.target.closest("[data-add-target]");
-      const add = e.target.closest("[data-add-slot]");
       if (e.target.closest("[data-add-cancel]")) {
         pendingAdd = null;
       } else if (target) {
         addToThisWeek(Number(target.dataset.addSlot), Number(target.dataset.addTarget));
         return;
-      } else if (add) {
-        const slot = Number(add.dataset.addSlot);
-        if (!weeks()[thisWeekISO()]) {
-          addToThisWeek(slot, null);
-          return;
-        }
-        pendingAdd = slot;
       } else return;
       renderCatchUp(currentWeek(), recipesFor(currentWeek()));
     });
 
-    $("recipeDetailsList").addEventListener("change", (e) => {
-      const box = e.target.closest("[data-cooked]");
+    $("recipeDetailsList").addEventListener("click", (e) => {
+      const mv = e.target.closest("[data-move]");
       const week = currentWeek();
-      if (!box || !week) return;
-      const cooked = Object.assign({}, week.cooked);
-      if (box.checked) cooked[box.dataset.cooked] = true;
-      else delete cooked[box.dataset.cooked];
-      MP.updatePlan({ weeks: Object.assign({}, weeks(), { [viewWeek]: Object.assign({}, week, { cooked }) }) });
-      renderWeekHeading();
-      renderCatchUp(currentWeek(), recipesFor(currentWeek()));
+      if (!mv || !week) return;
+      const slot = Number(mv.dataset.move);
+      if (!weeks()[thisWeekISO()]) {
+        addToThisWeek(slot, null); // no plan yet: start this week around it
+        return;
+      }
+      pendingAdd = slot;
+      renderCatchUp(week, recipesFor(week));
+      $("catchUp").scrollIntoView({ behavior: "smooth", block: "center" });
     });
     $("generateBtn").addEventListener("click", generate);
 

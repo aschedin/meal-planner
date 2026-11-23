@@ -336,7 +336,7 @@
     MP.settings = Object.assign(MP.defaultSettings(), settings && typeof settings === "object" ? settings : {});
     MP.settings.maxPrepTime = Number(MP.settings.maxPrepTime) || 30;
     MP.settings.maxCookTime = Number(MP.settings.maxCookTime) || 60;
-    // plan = { weeks: { "<Friday ISO date>": { recipeIds, cooked: {slot: true}, checks } }, history: [{ startDate, recipeIds }] }
+    // plan = { weeks: { "<Friday ISO date>": { recipeIds, checks } }, history: [{ startDate, recipeIds }] }
     MP.plan = Object.assign({ weeks: {}, history: [] }, plan && typeof plan === "object" ? plan : {});
 
     if (Array.isArray(recipes)) {
@@ -526,11 +526,7 @@
       .slice(0, 12)
       .forEach(([iso, w]) => {
         if (isoRe.test(iso) && w && typeof w === "object") {
-          const cooked = {};
-          [0, 1, 2].forEach((i) => {
-            if (w.cooked && w.cooked[i]) cooked[i] = true;
-          });
-          out.weeks[iso] = { recipeIds: ids(w.recipeIds), cooked, checks: { shop: ticks((w.checks || {}).shop), prep: ticks((w.checks || {}).prep) } };
+          out.weeks[iso] = { recipeIds: ids(w.recipeIds), checks: { shop: ticks((w.checks || {}).shop), prep: ticks((w.checks || {}).prep) } };
         }
       });
     out.history = (Array.isArray(p.history) ? p.history : [])
