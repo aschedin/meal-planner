@@ -33,9 +33,11 @@
         <button type="button" id="generateBtn" class="btn btn--primary">Generate plan</button>
       </div>
     </div>
-    <div class="week-tabs" role="group" aria-label="Choose week">
-      <button type="button" id="tabThis" class="week-tab" aria-pressed="true"></button>
-      <button type="button" id="tabNext" class="week-tab" aria-pressed="false"></button>
+    <div class="week-nav" role="group" aria-label="Choose week">
+      <button type="button" id="weekPrev" class="btn btn--icon" aria-label="Previous week" title="Previous week">‹</button>
+      <div class="week-nav__label" aria-live="polite"><strong id="weekLabel"></strong><span class="muted" id="weekSub"></span></div>
+      <button type="button" id="weekNext" class="btn btn--icon" aria-label="Next week" title="Next week">›</button>
+      <button type="button" id="weekToday" class="btn btn--small btn--ghost">This week</button>
     </div>
     <p class="muted" id="prefsSummary"></p>
     <p class="muted" id="generateStatus" role="status" aria-live="polite"></p>
@@ -48,7 +50,13 @@
     <p class="muted">Adjust what's eligible on the <a href="recipes.html">Recipes</a> and <a href="preferences.html">Preferences</a> pages first if you like.</p>
   </section>
 
+  <section class="card empty-card" id="pastEmpty" hidden>
+    <p class="muted">No plan was saved for this week.</p>
+  </section>
+
   <div id="weekContent" class="stack" hidden>
+
+    <div id="catchUp" class="notice" hidden></div>
 
     <section class="card" aria-labelledby="dailyHeading">
       <h2 id="dailyHeading">Daily plan</h2>

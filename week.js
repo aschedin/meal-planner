@@ -33,6 +33,13 @@
   const fridayOnOrBefore = (d) => addDays(d, -((d.getDay() - 5 + 7) % 7));
   const thisWeekISO = () => toISODate(fridayOnOrBefore(MP.today()));
   const nextWeekISO = () => toISODate(addDays(fridayOnOrBefore(MP.today()), 7));
+  const PAST_WEEKS_KEPT = 3;
+  const earliestWeekISO = () => toISODate(addDays(fromISODate(thisWeekISO()), -7 * PAST_WEEKS_KEPT));
+  const isPastWeek = (iso) => iso < thisWeekISO();
+  const weekName = (iso) => {
+    const diff = Math.round((fromISODate(iso).getTime() - fromISODate(thisWeekISO()).getTime()) / (7 * 86400000));
+    return diff === 0 ? "This week" : diff === 1 ? "Next week" : diff === -1 ? "Last week" : diff < 0 ? -diff + " weeks ago" : "In " + diff + " weeks";
+  };
   const weekRange = (iso) => {
     const s = fromISODate(iso);
     return formatDateShort(s) + " – " + formatDateShort(addDays(s, 6));
@@ -195,8 +202,8 @@
     const chosen = [];
     COOK_DAYS.forEach(() => chosen.push(chooseNext(pool, chosen, metrics, recent)));
 
-    // Drop weeks more than two weeks old.
-    const cutoff = toISODate(addDays(fromISODate(thisWeekISO()), -14));
+    // Keep the last three past weeks for looking back; drop anything older.
+    const cutoff = earliestWeekISO();
     const kept = {};
     Object.entries(weeks()).forEach(([iso, w]) => {
       if (iso >= cutoff) kept[iso] = w;
@@ -233,13 +240,16 @@
       ids[i] = null;
       setStatus("No other eligible recipes to swap in. Add more on the Recipes page.");
     }
-    MP.updatePlan({ weeks: Object.assign({}, weeks(), { [weekISO]: Object.assign({}, week, { recipeIds: ids }) }) });
+    const cooked = Object.assign({}, week.cooked);
+    delete cooked[i]; // a new recipe in this slot hasn't been cooked
+    MP.updatePlan({ weeks: Object.assign({}, weeks(), { [weekISO]: Object.assign({}, week, { recipeIds: ids, cooked }) }) });
   }
 
   // If a planned recipe was deleted or dismissed since, swap in a replacement.
   function repairMissing() {
     const dismissed = new Set(MP.settings.dismissedIds);
     Object.keys(weeks()).forEach((iso) => {
+      if (isPastWeek(iso)) return; // past weeks are a record; leave them as they were
       COOK_DAYS.forEach((_, i) => {
         const r = recipesFor(weeks()[iso])[i];
         if ((!r || dismissed.has(r.id)) && MP.eligibleRecipes().pool.length) {
@@ -343,27 +353,126 @@
   --------------------------------------------------------------------- */
   function render() {
     const week = currentWeek();
-    $("tabThis").innerHTML = `This week <span class="week-tab__range">${weekRange(thisWeekISO())}</span>`;
-    $("tabNext").innerHTML = `Next week <span class="week-tab__range">${weekRange(nextWeekISO())}</span>`;
-    $("tabThis").setAttribute("aria-pressed", String(viewWeek === thisWeekISO()));
-    $("tabNext").setAttribute("aria-pressed", String(viewWeek === nextWeekISO()));
-    $("tabThis").classList.toggle("is-active", viewWeek === thisWeekISO());
-    $("tabNext").classList.toggle("is-active", viewWeek === nextWeekISO());
+    const past = isPastWeek(viewWeek);
+    $("weekLabel").textContent = weekName(viewWeek);
+    $("weekSub").textContent = weekRange(viewWeek);
+    $("weekPrev").disabled = viewWeek <= earliestWeekISO();
+    $("weekNext").disabled = viewWeek >= nextWeekISO();
+    $("weekToday").hidden = viewWeek === thisWeekISO();
 
-    $("emptyState").hidden = !!week;
+    $("emptyState").hidden = !!week || past;
+    $("pastEmpty").hidden = !!week || !past;
     $("weekContent").hidden = !week;
+    $("generateBtn").hidden = past;
+    $("prefsSummary").hidden = past;
     $("generateBtn").textContent = week ? "Pick different recipes" : "Generate plan";
-    $("weekRange").textContent = formatDateLong(fromISODate(viewWeek)) + " – " + formatDateLong(addDays(fromISODate(viewWeek), 6));
-    renderPrefsSummary();
-    if (!week) return;
+    renderWeekHeading();
+    if (!past) renderPrefsSummary();
+    if (!week) {
+      $("catchUp").hidden = true;
+      return;
+    }
 
     const recipes = recipesFor(week);
     const start = fromISODate(viewWeek);
     const tasks = buildPrepTasks(start, recipes);
+    renderCatchUp(week, recipes);
     renderDays(recipes, start, tasks);
     renderRecipes(recipes, start);
     renderShopping(recipes, week);
     renderPrep(tasks, week);
+  }
+
+  // Long date range, plus how many of the week's recipes have been cooked.
+  function renderWeekHeading() {
+    const week = currentWeek();
+    let text = formatDateLong(fromISODate(viewWeek)) + " – " + formatDateLong(addDays(fromISODate(viewWeek), 6));
+    if (week && viewWeek <= thisWeekISO()) {
+      const n = recipesFor(week).filter((r, i) => r && (week.cooked || {})[i]).length;
+      text += ` · ${n} of ${week.recipeIds.filter(Boolean).length} cooked`;
+    }
+    $("weekRange").textContent = text;
+  }
+
+  // Past week: list recipes that never got cooked, with a way to move one into the current week.
+  let pendingAdd = null; // slot index in the past week being added, while choosing where it goes
+  function renderCatchUp(week, recipes) {
+    const el = $("catchUp");
+    const todo = isPastWeek(viewWeek) ? recipes.map((r, i) => ({ r, i })).filter((x) => x.r && !(week.cooked || {})[x.i]) : [];
+    el.hidden = !todo.length;
+    if (!todo.length) {
+      pendingAdd = null;
+      return;
+    }
+    const thisISO = thisWeekISO();
+    const cur = weeks()[thisISO];
+    const curRecipes = cur ? recipesFor(cur) : [];
+    const rows = todo
+      .map(({ r, i }) => {
+        const inPlan = cur && cur.recipeIds.includes(r.id);
+        let action;
+        if (inPlan) action = '<span class="hint">Already in this week\'s plan</span>';
+        else if (pendingAdd === i && cur) {
+          const today = toISODate(MP.today());
+          let slots = COOK_DAYS.map((d, s) => s).filter((s) => toISODate(addDays(fromISODate(thisISO), COOK_DAYS[s])) >= today && !(cur.cooked || {})[s]);
+          if (!slots.length) slots = COOK_DAYS.map((d, s) => s);
+          action =
+            '<span class="catchup__choose">Replace which meal this week? ' +
+            slots
+              .map((s) => {
+                const day = addDays(fromISODate(thisISO), COOK_DAYS[s]).toLocaleDateString(undefined, { weekday: "short" });
+                const nm = curRecipes[s] ? curRecipes[s].name : "empty";
+                return `<button type="button" class="btn btn--small btn--ghost" data-add-target="${s}" data-add-slot="${i}">${escapeHtml(day + ": " + nm)}</button>`;
+              })
+              .join("") +
+            '<button type="button" class="btn--text" data-add-cancel="1">Cancel</button></span>';
+        } else action = `<button type="button" class="btn btn--small btn--primary" data-add-slot="${i}">Add to this week</button>`;
+        return `<li><span>${escapeHtml(r.name)}</span> ${action}</li>`;
+      })
+      .join("");
+    el.innerHTML = `<strong>Not cooked yet</strong> — add one to this week's plan if you still want to make it.<ul class="catchup-list">${rows}</ul>`;
+  }
+
+  // Put a past recipe into this week: replace a chosen slot, or start the week around it if there's no plan yet.
+  function addToThisWeek(fromSlot, targetSlot) {
+    const src = weeks()[viewWeek];
+    const recipe = src && recipesFor(src)[fromSlot];
+    if (!recipe) return;
+    const thisISO = thisWeekISO();
+    const cur = weeks()[thisISO];
+    let week;
+    if (cur) {
+      if (targetSlot == null) return;
+      const ids = cur.recipeIds.slice();
+      ids[targetSlot] = recipe.id;
+      const cooked = Object.assign({}, cur.cooked);
+      delete cooked[targetSlot];
+      week = Object.assign({}, cur, { recipeIds: ids, cooked });
+    } else {
+      // No plan yet: put it in the first upcoming cook day and fill the rest as usual.
+      const today = toISODate(MP.today());
+      let slot = COOK_DAYS.findIndex((d) => toISODate(addDays(fromISODate(thisISO), d)) >= today);
+      if (slot < 0) slot = 0;
+      const { pool } = MP.eligibleRecipes();
+      const { metrics } = buildMetrics();
+      const recent = recentSets(thisISO);
+      const chosen = [recipe];
+      const ids = [null, null, null];
+      ids[slot] = recipe.id;
+      for (let s = 0; s < COOK_DAYS.length; s++) {
+        if (s === slot) continue;
+        const rest = pool.filter((r) => r.id !== recipe.id);
+        if (!rest.length) break;
+        const pick = chooseNext(rest, chosen, metrics, recent);
+        chosen.push(pick);
+        ids[s] = pick.id;
+      }
+      week = { recipeIds: ids, cooked: {}, checks: { shop: {}, prep: {} } };
+    }
+    pendingAdd = null;
+    MP.updatePlan({ weeks: Object.assign({}, weeks(), { [thisISO]: week }) });
+    showWeek(thisISO);
+    setStatus("Added “" + recipe.name + "” to this week's plan.");
   }
 
   function renderPrefsSummary() {
@@ -499,8 +608,9 @@
             <div class="toddler-appeal" title="Toddler appeal">${starRating(recipe.toddlerAppeal || 3)} <span class="hint">toddler appeal</span></div>
           </div>
           <div class="recipe-card__actions">
+            <label class="cooked-toggle"><input type="checkbox" data-cooked="${i}"${((currentWeek() || {}).cooked || {})[i] ? " checked" : ""} /> Cooked</label>
             ${MP.ratingSelect(recipe.id, recipe.rating)}
-            <button type="button" class="btn btn--icon dismiss-icon" data-dismiss="${i}" title="Dismiss — never plan this again and swap in another" aria-label="Dismiss this recipe">✕</button>
+            ${isPastWeek(viewWeek) ? "" : `<button type="button" class="btn btn--icon dismiss-icon" data-dismiss="${i}" title="Dismiss — never plan this again and swap in another" aria-label="Dismiss this recipe">✕</button>`}
           </div>
         </div>
         <div class="recipe-card__cols">
@@ -719,8 +829,48 @@
     const thisISO = thisWeekISO(), nextISO = nextWeekISO();
     viewWeek = weeks()[thisISO] ? thisISO : weeks()[nextISO] ? nextISO : MP.today().getDay() === 4 ? nextISO : thisISO;
 
-    $("tabThis").addEventListener("click", () => showWeek(thisWeekISO()));
-    $("tabNext").addEventListener("click", () => showWeek(nextWeekISO()));
+    const stepWeek = (n) => {
+      pendingAdd = null;
+      const iso = toISODate(addDays(fromISODate(viewWeek), 7 * n));
+      if (iso >= earliestWeekISO() && iso <= nextWeekISO()) showWeek(iso);
+    };
+    $("weekPrev").addEventListener("click", () => stepWeek(-1));
+    $("weekNext").addEventListener("click", () => stepWeek(1));
+    $("weekToday").addEventListener("click", () => {
+      pendingAdd = null;
+      showWeek(thisWeekISO());
+    });
+
+    $("catchUp").addEventListener("click", (e) => {
+      const target = e.target.closest("[data-add-target]");
+      const add = e.target.closest("[data-add-slot]");
+      if (e.target.closest("[data-add-cancel]")) {
+        pendingAdd = null;
+      } else if (target) {
+        addToThisWeek(Number(target.dataset.addSlot), Number(target.dataset.addTarget));
+        return;
+      } else if (add) {
+        const slot = Number(add.dataset.addSlot);
+        if (!weeks()[thisWeekISO()]) {
+          addToThisWeek(slot, null);
+          return;
+        }
+        pendingAdd = slot;
+      } else return;
+      renderCatchUp(currentWeek(), recipesFor(currentWeek()));
+    });
+
+    $("recipeDetailsList").addEventListener("change", (e) => {
+      const box = e.target.closest("[data-cooked]");
+      const week = currentWeek();
+      if (!box || !week) return;
+      const cooked = Object.assign({}, week.cooked);
+      if (box.checked) cooked[box.dataset.cooked] = true;
+      else delete cooked[box.dataset.cooked];
+      MP.updatePlan({ weeks: Object.assign({}, weeks(), { [viewWeek]: Object.assign({}, week, { cooked }) }) });
+      renderWeekHeading();
+      renderCatchUp(currentWeek(), recipesFor(currentWeek()));
+    });
     $("generateBtn").addEventListener("click", generate);
 
     $("recipeDetailsList").addEventListener("click", (e) => {

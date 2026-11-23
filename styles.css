@@ -567,6 +567,16 @@ input[type="search"] {
 }
 .week-tab:hover { color: var(--color-text); }
 .week-tab.is-active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-card); }
+.week-nav { display: flex; align-items: center; gap: 8px; margin: 14px 0 10px; flex-wrap: wrap; }
+.week-nav .btn--icon { font-size: 1.4rem; line-height: 1; width: 40px; height: 40px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); }
+.week-nav .btn--icon:disabled { opacity: 0.35; cursor: default; }
+.week-nav__label { display: flex; flex-direction: column; min-width: 150px; text-align: center; line-height: 1.25; }
+.week-nav__label .muted { font-size: 0.85rem; }
+.cooked-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.cooked-toggle input { width: 18px; height: 18px; accent-color: var(--color-accent); }
+.catchup-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.catchup-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.catchup__choose { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.9rem; }
 .week-tab__range { font-weight: 400; font-size: 0.8rem; color: var(--color-text-muted); margin-left: 6px; }
 .plan-day__role { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary-dark); margin-top: -4px; }
 .plan-day__caption { margin: 0; padding-top: 8px; border-top: 1px dashed var(--color-border); font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); }
@@ -667,6 +677,9 @@ input[type="search"] {
   .btn--small { min-height: 38px; }
   .week-head__actions { width: 100%; }
   .week-head__actions .btn { flex: 1; }
+  .week-nav { justify-content: space-between; }
+  .week-nav__label { flex: 1; min-width: 0; }
+  .week-nav #weekToday { width: 100%; }
   .week-tabs { display: flex; width: 100%; }
   .week-tab { flex: 1; padding: 8px 10px; }
   .week-tab__range { display: block; margin: 2px 0 0; }
