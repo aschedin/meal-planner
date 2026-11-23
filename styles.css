@@ -572,6 +572,11 @@ input[type="search"] {
 .week-nav .btn--icon:disabled { opacity: 0.35; cursor: default; }
 .week-nav__label { display: flex; flex-direction: column; min-width: 150px; text-align: center; line-height: 1.25; }
 .week-nav__label .muted { font-size: 0.85rem; }
+.shop-prompt__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 16px; margin: 10px 0; }
+.shop-prompt__item { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; cursor: pointer; }
+.shop-prompt__item input { width: 18px; height: 18px; accent-color: var(--color-accent); flex: none; }
+.shop-prompt__item .muted { margin-left: auto; font-size: 0.82rem; text-align: right; }
+.shop-prompt__actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .catchup__choose { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; font-size: 0.9rem; }
 .week-tab__range { font-weight: 400; font-size: 0.8rem; color: var(--color-text-muted); margin-left: 6px; }
 .plan-day__role { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-primary-dark); margin-top: -4px; }

@@ -47,6 +47,13 @@
   const weeks = () => MP.plan.weeks || {};
   const currentWeek = () => weeks()[viewWeek] || null;
   const recipesFor = (week) => COOK_DAYS.map((_, i) => MP.recipes.find((r) => r.id === week.recipeIds[i]) || null);
+  // Recipes as the shopping list sees them: ingredients you said you already have are left out.
+  const haveKey = (name) => String(name).toLowerCase().trim();
+  const shopRecipes = (week) =>
+    recipesFor(week).map((r) => {
+      const have = r && week.have && week.have[r.id];
+      return have && have.length ? Object.assign({}, r, { ingredients: r.ingredients.filter((ing) => !have.includes(haveKey(ing.name))) }) : r;
+    });
 
   // Older versions stored one plan under `current`; keep it only if it fits the Friday template.
   function migrateLegacyPlan() {
@@ -377,7 +384,8 @@
     renderCatchUp(week, recipes);
     renderDays(recipes, start, tasks);
     renderRecipes(recipes, start);
-    renderShopping(recipes, week);
+    renderShopPrompt(week);
+    renderShopping(shopRecipes(week), week);
     renderPrep(tasks, week);
   }
 
@@ -448,9 +456,36 @@
       week = { recipeIds: ids, checks: { shop: {}, prep: {} } };
     }
     pendingAdd = null;
+    pendingShop = recipe.id;
     MP.updatePlan({ weeks: Object.assign({}, weeks(), { [thisISO]: week }) });
     showWeek(thisISO);
     setStatus("Moved “" + recipe.name + "” to this week's plan.");
+    $("shopPrompt").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // After a move: ask which of the recipe's ingredients still need buying (the rest are left off the list).
+  let pendingShop = null; // id of the recipe just moved into this week
+  function renderShopPrompt(week) {
+    const el = $("shopPrompt");
+    const recipe = pendingShop && viewWeek === thisWeekISO() && week.recipeIds.includes(pendingShop) ? MP.recipes.find((r) => r.id === pendingShop) : null;
+    el.hidden = !recipe;
+    if (!recipe) {
+      if (viewWeek === thisWeekISO()) pendingShop = null;
+      return;
+    }
+    const seen = new Set();
+    const rows = recipe.ingredients
+      .filter((ing) => !seen.has(haveKey(ing.name)) && seen.add(haveKey(ing.name)))
+      .map((ing) => {
+        const qty = [ing.qty, ing.unit && ing.unit !== "each" ? ing.unit : ""].filter((x) => x !== "" && x != null).join(" ");
+        return `<label class="shop-prompt__item"><input type="checkbox" data-shop-ing="${escapeHtml(haveKey(ing.name))}" checked /><span>${escapeHtml(ing.name)}</span><span class="muted">${escapeHtml(qty)}</span></label>`;
+      })
+      .join("");
+    el.innerHTML =
+      `<strong>Which ingredients for “${escapeHtml(recipe.name)}” do you still need to buy?</strong> Uncheck anything you already have.` +
+      `<div class="shop-prompt__list">${rows}</div>` +
+      '<div class="shop-prompt__actions"><button type="button" class="btn btn--small btn--primary" data-shop-confirm="1">Add to shopping list</button>' +
+      '<button type="button" class="btn--text" data-shop-skip="1">Add everything</button></div>';
   }
 
   function renderPrefsSummary() {
@@ -830,6 +865,21 @@
       renderCatchUp(currentWeek(), recipesFor(currentWeek()));
     });
 
+    $("shopPrompt").addEventListener("click", (e) => {
+      const week = currentWeek();
+      if (!week || !pendingShop) return;
+      const confirmBtn = e.target.closest("[data-shop-confirm]");
+      if (!confirmBtn && !e.target.closest("[data-shop-skip]")) return;
+      const have = Object.assign({}, week.have);
+      const skipped = confirmBtn ? [...$("shopPrompt").querySelectorAll("[data-shop-ing]")].filter((b) => !b.checked).map((b) => b.dataset.shopIng) : [];
+      if (skipped.length) have[pendingShop] = skipped;
+      else delete have[pendingShop];
+      pendingShop = null;
+      MP.updatePlan({ weeks: Object.assign({}, weeks(), { [viewWeek]: Object.assign({}, week, { have }) }) });
+      render();
+      $("shoppingHeading").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     $("recipeDetailsList").addEventListener("click", (e) => {
       const mv = e.target.closest("[data-move]");
       const week = currentWeek();
@@ -855,7 +905,7 @@
       const copyBtn = e.currentTarget;
       const week = currentWeek();
       if (!week) return;
-      const text = bothListsText(recipesFor(week), week);
+      const text = bothListsText(shopRecipes(week), week);
       const label = copyBtn.dataset.label || (copyBtn.dataset.label = copyBtn.textContent);
       document.querySelectorAll(".copy-fallback").forEach((el) => el.remove());
       if (!text) {
@@ -888,12 +938,12 @@
         if (map[btn.dataset.name] === btn.dataset.storeBtn) delete map[btn.dataset.name];
         else map[btn.dataset.name] = btn.dataset.storeBtn;
       } else {
-        flattenShopping(recipesFor(week))
+        flattenShopping(shopRecipes(week))
           .filter((x) => !x.store)
           .forEach((x) => (map[storeKey(x.item.name)] = bulk.dataset.bulk));
       }
       MP.updateSettings({ storeByItem: map });
-      renderShopping(recipesFor(week), week);
+      renderShopping(shopRecipes(week), week);
     });
 
     $("recipeDetailsList").addEventListener("change", (e) => {

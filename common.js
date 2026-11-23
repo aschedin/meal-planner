@@ -526,7 +526,13 @@
       .slice(0, 12)
       .forEach(([iso, w]) => {
         if (isoRe.test(iso) && w && typeof w === "object") {
-          out.weeks[iso] = { recipeIds: ids(w.recipeIds), checks: { shop: ticks((w.checks || {}).shop), prep: ticks((w.checks || {}).prep) } };
+          const have = {};
+          Object.entries(w.have && typeof w.have === "object" ? w.have : {})
+            .slice(0, 3)
+            .forEach(([id, names]) => {
+              if (ID_RE.test(id) && Array.isArray(names)) have[id] = names.slice(0, 200).map((n) => str(n, 200));
+            });
+          out.weeks[iso] = { recipeIds: ids(w.recipeIds), have, checks: { shop: ticks((w.checks || {}).shop), prep: ticks((w.checks || {}).prep) } };
         }
       });
     out.history = (Array.isArray(p.history) ? p.history : [])
